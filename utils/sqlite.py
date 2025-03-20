@@ -67,7 +67,20 @@ class SQLite():
             return result[0], result[1]
         else:
             return None
-    
+    def get_password(self, id):
+        self.cursor.execute("SELECT secret FROM secrets WHERE id = (?)", (id,))
+        result = self.cursor.fetchone()
+        if result:
+            return result[0]
+        else:
+            return None
+    def delete_database(self, name):
+        try:
+            self.exit()
+            os.remove(f'./databases/{name}.db')
+            return True
+        except Exception:
+            return False
     def exit(self):
         self.database.close()
         return True

@@ -107,6 +107,8 @@ class Create_Database():
                 self.create_master_password()
                 self.insert_credentials()
             elif option == EXIT:
+                self.sqlite.exit()
                 self.console.print("[bold green]Exiting Ruby Vault. Goodbye![/bold green]")
             else:
+                self.sqlite.exit()
                 self.console.print("[bold red]Invalid option. Exiting...[/bold red]")
