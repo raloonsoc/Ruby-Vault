@@ -29,7 +29,7 @@ class SQLite():
             self.cursor = connect.cursor()
             cursor = connect.cursor()
             cursor.execute("CREATE TABLE IF NOT EXISTS secrets (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, secret TEXT NOT NULL)")
-            cursor.execute("CREATE TABLE IF NOT EXISTS salts (id INTEGER PRIMARY KEY AUTOINCREMENT, salt BLOB NOT NULL)")
+            cursor.execute("CREATE TABLE IF NOT EXISTS master (id INTEGER PRIMARY KEY AUTOINCREMENT, salt BLOB NOT NULL, verifier TEXT NOT NULL)")
             return True
         except sqlite3.Error as e:
             print(f"An error occurred: {e}")
@@ -56,14 +56,17 @@ class SQLite():
         except sqlite3.Error as e:
             print(f"An error occurred while viewing data: {e}")
             return None
-    def save_salt_to_db(self, salt):
-        self.cursor.execute("INSERT INTO salts (salt) VALUES (?)", (salt,))
+    def save_master_to_db(self, salt, verifier):
+        self.cursor.execute("INSERT INTO master (salt, verifier) VALUES (?, ?)", (salt,verifier,))
         self.database.commit()
 
-    def get_salt_from_db(self):
-        self.cursor.execute("SELECT salt FROM salts")
+    def get_master_from_db(self):
+        self.cursor.execute("SELECT salt,verifier FROM master")
         result = self.cursor.fetchone()
-        return result[0] if result else None
+        if result:
+            return result[0], result[1]
+        else:
+            return None
     
     def exit(self):
         self.database.close()

@@ -8,6 +8,7 @@ import os
 class Crypt():
     def __init__(self):
         self.cipher_suite = None
+        self.verifier = None
     
     def generate_master_password(self, password):
         salt = os.urandom(16)
@@ -20,9 +21,10 @@ class Crypt():
     )
         key = base64.urlsafe_b64encode(kdf.derive(password.encode()))
         self.cipher_suite = Fernet(key)
-        return salt
+        self.verifier = self.encrypt("verification")
+        return salt, self.verifier
     
-    def load_key(self, password, salt):
+    def load_key(self, password, salt, stored_verifier):
         kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
         length=32,
@@ -32,6 +34,15 @@ class Crypt():
         )
         key = base64.urlsafe_b64encode(kdf.derive(password.encode()))
         self.cipher_suite = Fernet(key)
+
+        try:
+            decrypt_stored_verifier = self.decrypt(stored_verifier)
+            if decrypt_stored_verifier != "verification":
+                return False
+            else:
+                return True
+        except:
+            return False
     
     def encrypt(self, plaintext):
         if self.cipher_suite is None:
