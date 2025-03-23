@@ -17,8 +17,8 @@ import pyperclip
 INSERT_CREDENTIALS = "1"
 VIEW_DATA = "2"
 GET_PASSWORD = "3"
-EXIT = "4"
-DELETE_DATABASE = "5"
+DELETE_DATABASE = "4"
+EXIT = "5"
 
 DATABASES_FOLDER = './databases'
 
@@ -37,8 +37,8 @@ OPTIONS_MESSAGE = """
 1. Insert credentials
 2. View data
 3. Get password
-4. Exit
-5. Delete database
+4. Delete database
+5. Exit
 """
 
 
@@ -48,6 +48,7 @@ class Access_Database():
         self.sqlite = SQLite()
         self.console.clear()
         self.crypt = Crypt()
+        self.selected_database = None
         Title(self.console)
     
     def display_welcome_message(self):
@@ -78,15 +79,15 @@ class Access_Database():
             try:
                 opt_db = int(Prompt.ask('Enter the number of the database')) - 1
                 if 0 <= opt_db < len(databases):
+                    self.selected_database = databases[opt_db].replace('.db', '')
                     return databases[opt_db].replace('.db', '')
                 self.console.print(Text("Invalid selection. Please try again.", style='red'))
             except ValueError:
                 self.console.print(Text("Please enter a valid number.", style='red'))
     
-    def connect_to_database(self, selected_database):
+    def connect_to_database(self):
         try:
-            self.sqlite.connect_database(selected_database)
-            self.console.print(Text(f'{selected_database} is selected', style='cyan'))
+            self.sqlite.connect_database(self.selected_database)
             return True
         except Exception as e:
             self.console.print(Text(f"Error connecting to database: {e}", style='red'))
@@ -106,7 +107,7 @@ class Access_Database():
     
     def get_user_option(self):
         self.console.print(Panel(Markdown(OPTIONS_MESSAGE)))
-        return Prompt.ask("Enter your option:", choices=[INSERT_CREDENTIALS,VIEW_DATA,GET_PASSWORD,EXIT,DELETE_DATABASE], default=INSERT_CREDENTIALS)
+        return Prompt.ask("Enter your option:", choices=[INSERT_CREDENTIALS,VIEW_DATA,GET_PASSWORD, DELETE_DATABASE, EXIT], default=INSERT_CREDENTIALS)
     
     def insert_credentials(self):
         index = 0
@@ -121,10 +122,11 @@ class Access_Database():
             if not Confirm.ask('Do you want to continue?', default=True):
                 break
             index += 1
+        self.menu()
 
-    def display_database_data(self, selected_database):
+    def display_database_data(self):
         view_data = self.sqlite.view_data()
-        table = Table(title=f"{selected_database}'s data")
+        table = Table(title=f"{self.selected_database}'s data")
         table.add_column("ID", justify="center", style="cyan", no_wrap=True)
         table.add_column("NAME", justify="center", style="green", no_wrap=True)
         if not view_data:
@@ -132,9 +134,10 @@ class Access_Database():
         for id, name in view_data:
             table.add_row(str(id), name)
         self.console.print(table)
+        self.menu()
     
-    def get_password(self, selected_database):
-        self.display_database_data(selected_database)
+    def get_password(self):
+        self.display_database_data(self.selected_database)
         choices= [str(id) for id, _ in self.sqlite.view_data()] 
         opt = int(Prompt.ask('Select the credential', choices=choices))
         try:
@@ -147,53 +150,53 @@ class Access_Database():
                 time.sleep(1)
             pyperclip.copy(" ")
             self.console.print(Text("Clipboard cleared.", style='bold yellow'))
-            self.menu(selected_database)
+            self.menu()
         except Exception as e:
             self.console.print(Text(f"An error occurred while getting password from the database: {e}", style='bold red'))
-            self.menu(selected_database)
+            self.menu()
     
-    def menu(self, selected_database):
+    def menu(self):
         option = self.get_user_option()
         if option == INSERT_CREDENTIALS:
             self.insert_credentials()
             self.sqlite.exit()
         elif option == VIEW_DATA:
-            self.display_database_data(selected_database)
+            self.display_database_data()
             self.sqlite.exit()
         elif option == GET_PASSWORD:
-            self.get_password(selected_database)
+            self.get_password()
         elif option == EXIT:
             self.sqlite.exit()
             self.console.print("[bold green]Exiting Ruby Vault. Goodbye![/bold green]")
         elif option == DELETE_DATABASE:
-            self.delete_database(selected_database)
+            self.delete_database()
         else:
             self.sqlite.exit()
             self.console.print("[bold red]Invalid option. Exiting...[/bold red]")
 
-    def delete_database(self, selected_database):
-        if Confirm.ask(f'Are you sure you want to delete "{selected_database}"? (ALL DATA WILL BE REMOVED)'):
+    def delete_database(self):
+        if Confirm.ask(f'Are you sure you want to delete "{self.selected_database}"? (ALL DATA WILL BE REMOVED)'):
             try:
-                if self.sqlite.delete_database(selected_database):
-                    self.console.print(Text(f'The database "{selected_database}" has been successfully removed.', style='bold green'))
+                if self.sqlite.delete_database(self.selected_database):
+                    self.console.print(Text(f'The database "{self.selected_database}" has been successfully removed.', style='bold green'))
                 else:
-                    self.console.print(Text(f'The database "{selected_database}" could not be removed. Please check your admin permissions or try again.', style='bold red'))
-                    self.menu(selected_database)
+                    self.console.print(Text(f'The database "{self.selected_database}" could not be removed. Please check your admin permissions or try again.', style='bold red'))
+                    self.menu()
             except Exception as e:
                 self.console.print(Text(f"An error occurred while removing the database: {e}", style='bold red'))
-                self.menu(selected_database)
+                self.menu()
         else:
             self.console.print(Text("Database deletion canceled.", style='bold yellow'))
-            self.menu(selected_database)
+            self.menu()
         
     def run(self):
         self.display_welcome_message()
         self.check_databases_folder()
         databases = self.get_databases()
         self.display_databases(databases)
-        selected_database = self.select_database(databases)
-        if self.connect_to_database(selected_database):
+        self.select_database(databases)
+        if self.connect_to_database():
             if self.verify_master_password():
-                self.menu(selected_database)
+                self.menu()
 
 
